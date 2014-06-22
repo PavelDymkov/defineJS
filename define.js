@@ -99,9 +99,19 @@
 
 
     function Attach(descriptor) {
+        this.settings = descriptor;
+
         Attach.base.constructor.call(this, descriptor);
     }
     extend(Attach, Asset);
+
+    Attach.prototype.assetReady = function () {
+        if (this.settings.callback && typeof global[this.settings.callback] == "function") {
+            global[this.settings.callback]();
+        }
+
+        scriptsManager.scriptReady();
+    };
 
 
     var SCRIPT_TYPE = {
@@ -122,7 +132,9 @@
     global.define = define;
 	global.attach = attach;
 
-	attach("main.js");
+	attach("main.js", {
+        callback: "main"
+    });
 
 
 	function using(path) {
@@ -138,11 +150,13 @@
 
 	}
 
-	function attach(url) {
-        scriptsManager.addScript({
-            type: SCRIPT_TYPE.ATTACH,
-            url: url
-        });
+	function attach(url, settings) {
+        if (!settings) settings = {};
+
+        settings.type = SCRIPT_TYPE.ATTACH;
+        settings.url = url;
+
+        scriptsManager.addScript(settings);
 	}
 
 
