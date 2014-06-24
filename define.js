@@ -197,15 +197,10 @@
         delete description.constructor;
 
         for (var key in description) if (description.hasOwnProperty(key)) {
-            var value = description[key];
-
-            prototype[key] = value;
-
-            if (typeof value == "function") value["[[owner]]"] = constructor;
+            prototype[key] = description[key];
         }
 
         constructor.base = base || null;
-        constructor["[[owner]]"] = constructor;
         constructor.prototype = prototype;
         prototype.constructor = constructor;
 
@@ -309,6 +304,7 @@
                 var value = currentPrototype[key];
 
                 if (typeof value == "function") {
+                    value["[[owner]]"] = currentPrototype.constructor;
                     currentBoundPrototype[key] = value.bind(instance);
                 }
             }
