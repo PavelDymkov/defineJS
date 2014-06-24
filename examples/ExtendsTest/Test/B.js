@@ -3,6 +3,12 @@ define({
 	base: "Test.A",
 
 	method: function () {
-		console.log("A.method");
-	}
+		console.log("B.method");
+        this.base.method();
+	},
+
+    test: function () {
+        console.log("B.test");
+        this.base.test();
+    }
 });

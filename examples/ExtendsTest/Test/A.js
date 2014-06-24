@@ -7,5 +7,11 @@ define({
 
 	method: function () {
 		console.log("A.method");
-	}
+
+        this.test();
+	},
+
+    test: function () {
+        console.log("A.test");
+    }
 });

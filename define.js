@@ -15,6 +15,12 @@
         return this.namespace.concat(this.type + ".js").join("/");
     };
 
+    Type.prototype.getType = function () {
+        var namespace = requireNamespace(this.namespace);
+
+        return namespace[this.type] ? namespace[this.type] : null;
+    };
+
 
     function ScriptsManager() {
         this.loadedUrls = {};
@@ -106,8 +112,8 @@
     extend(Attach, Asset);
 
     Attach.prototype.assetReady = function () {
-        if (this.settings.callback && typeof global[this.settings.callback] == "function") {
-            global[this.settings.callback]();
+        if (typeof this.settings.onComplete  == "function") {
+            this.settings.onComplete();
         }
 
         scriptsManager.scriptReady();
@@ -128,12 +134,21 @@
     var currentScript = getCurrentScript();
     var scriptsContainer = currentScript.parentNode;
 
+    var baseObject = {
+        test: function () { console.log("test"); }
+    };
+    defineBaseGetter();
+
     global.using = using;
     global.define = define;
 	global.attach = attach;
 
 	attach("main.js", {
-        callback: "main"
+        onComplete: function () {
+            if (typeof global["main"] == "function") {
+                global["main"]();
+            }
+        }
     });
 
 
@@ -146,12 +161,61 @@
         });
 	}
 
-	function define() {
+	function define(description) {
+        if (description.base) {
+            var base = new Type(description.base);
+            var baseType = base.getType();
+            //console.log(baseType);
 
+            if (baseType) createType(description, baseType);
+            else attach(base.toUrl(), baseTypeLoaded);
+        } else {
+            createType(description);
+        }
+
+        function baseTypeLoaded() {
+            createType(description, base.getType());
+        }
 	}
+
+    function createType(description, base) {
+        var type = new Type(description.type);
+
+        var constructor;
+
+        if (description.hasOwnProperty("constructor") && typeof description.constructor == "function")
+            constructor = description.constructor;
+        else if (base)
+            constructor = function () { this.base.constructor(); };
+        else
+            constructor = function () { };
+
+        var prototype = Object.create(base ? base.prototype : baseObject);
+
+        delete description.type;
+        delete description.base;
+        delete description.constructor;
+
+        for (var key in description) if (description.hasOwnProperty(key)) {
+            var value = description[key];
+
+            prototype[key] = value;
+
+            if (typeof value == "function") value["[[owner]]"] = constructor;
+        }
+
+        constructor.base = base || null;
+        constructor["[[owner]]"] = constructor;
+        constructor.prototype = prototype;
+        prototype.constructor = constructor;
+
+        requireNamespace(type.namespace)[type.type] = constructor;
+
+    }
 
 	function attach(url, settings) {
         if (!settings) settings = {};
+        if (typeof settings == "function") settings = { onComplete: settings };
 
         settings.type = SCRIPT_TYPE.ATTACH;
         settings.url = url;
@@ -195,6 +259,67 @@
         type.base = base.prototype;
         type.prototype = Object.create(base.prototype);
         type.prototype.constructor = type;
+    }
+
+    function requireNamespace(namespaceList) {
+        var context = global;
+
+        for (var i = 0; i < namespaceList.length; i++) {
+            var name = namespaceList[i];
+
+            if (!context[name]) context[name] = {};
+
+            context = context[name];
+        }
+
+        return context;
+    }
+
+    function defineBaseGetter() {
+        Object.defineProperty(baseObject, "base", {
+            get: function baseGetter() {
+                if (!this["[[boundPrototypes]]"]) createBoundPrototypesChain(this);
+
+                var boundPrototypes = this["[[boundPrototypes]]"];
+                var base = baseGetter.caller && baseGetter.caller["[[owner]]"] ? baseGetter.caller["[[owner]]"].base : this.constructor.base;
+
+                for (var i = 0; i < boundPrototypes.length; i++) {
+                    var currentBoundPrototype = boundPrototypes[i];
+
+                    if (currentBoundPrototype.type == base) {
+                        return currentBoundPrototype.boundPrototype;
+                    }
+                }
+            }
+        });
+    }
+
+    function createBoundPrototypesChain(instance) {
+        var prototypesChain = [];
+
+        for (var currentConstructor = instance.constructor.base; currentConstructor; currentConstructor = currentConstructor.base) {
+            prototypesChain.unshift(currentConstructor.prototype);
+        }
+
+        for (var i = 0; i < prototypesChain.length; i++) {
+            var currentPrototype = prototypesChain[i];
+            var currentBoundPrototype = Object.create(currentBoundPrototype || null); // or "baseObject"???
+
+            for (var key in currentPrototype) if (currentPrototype.hasOwnProperty(key)) {
+                var value = currentPrototype[key];
+
+                if (typeof value == "function") {
+                    currentBoundPrototype[key] = value.bind(instance);
+                }
+            }
+
+            prototypesChain[i] = {
+                type: prototypesChain[i].constructor,
+                boundPrototype: currentBoundPrototype
+            };
+        }
+
+        instance["[[boundPrototypes]]"] = prototypesChain;
     }
 
 } ();

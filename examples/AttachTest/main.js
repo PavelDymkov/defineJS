@@ -4,5 +4,5 @@ using("Test.I");
 console.log("main.js");
 
 function main() {
-    console.log("main called");
+    console.log('"main" called');
 }

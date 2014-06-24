@@ -1,7 +1,6 @@
-//using("Test.B");
+using("Test.C");
 
 function main() {
-	console.log("test");
-	//var b = new B;
-	//b.method();
+	var c = new Test.C;
+    c.method();
 }
