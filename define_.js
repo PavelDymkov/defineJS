@@ -53,15 +53,13 @@
     ScriptsManager.prototype.scriptReady = function () {
         var current = this.scriptsStack.shift();
 
+        if (this.scriptsStack.length == 0) this.scriptsStack = null;
 
         if (current instanceof Attach && typeof current.settings.onComplete == "function") {
-            var emptyAttach = new EmptyAttach;
-            this.scriptsStack.unshift(emptyAttach);
             current.settings.onComplete();
         }
 
-        if (this.scriptsStack.length == 0) this.scriptsStack = null;
-        else this.scriptsStack[0].checkAssets();
+        if (this.scriptsStack) this.scriptsStack[0].checkAssets();
     };
 
     ScriptsManager.prototype.addAsset = function (asset) {
@@ -110,11 +108,6 @@
         Attach.base.constructor.call(this, descriptor);
     }
     extend(Attach, Asset);
-
-    function EmptyAttach() {
-        this.assets = [];
-    }
-    extend(EmptyAttach, Asset);
 
 
     var SCRIPT_TYPE = {

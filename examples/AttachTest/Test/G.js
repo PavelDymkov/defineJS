@@ -1,3 +1,1 @@
-
-
-console.log("Test/G.js");
+console.log("    Test/G.js");
