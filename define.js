@@ -128,8 +128,18 @@
     var scriptsManager = new ScriptsManager;
     global.scriptsManager = scriptsManager; // debug !!!
 
-    var currentScript = getCurrentScript();
-    var scriptsContainer = currentScript.parentNode;
+    if (typeof window !== "undefined" && window == global) {
+        var currentScript = getCurrentScript();
+        var scriptsContainer = currentScript.parentNode;
+    } else {
+        var fs = require("fs");
+        loadScript = function (url, callback) {
+            fs.readFile(url, { encoding: "utf-8" }, function (error, code) {
+                global.eval(code);
+                callback();
+            });
+        };
+    }
 
     var baseObject = {
         test: function () { console.log("test"); }
