@@ -125,12 +125,26 @@
 
 	var global = this;
 
+    var settings = {
+        rootPath: ""
+    };
+
     var scriptsManager = new ScriptsManager;
     global.scriptsManager = scriptsManager; // debug !!!
 
     if (typeof window !== "undefined" && window == global) {
         var currentScript = getCurrentScript();
         var scriptsContainer = currentScript.parentNode;
+
+        !function (string) {
+            try {
+                var userSettings = JSON.parse(string);
+                for (var key in userSettings) if (userSettings.hasOwnProperty(key)) {
+                    settings[key] = userSettings[key];
+                }
+            } catch (error) {}
+        } (currentScript.getAttribute("data-settings"));
+
     } else {
         var fs = require("fs");
         loadScript = function (url, callback) {
@@ -141,9 +155,7 @@
         };
     }
 
-    var baseObject = {
-        test: function () { console.log("test"); }
-    };
+    var baseObject = {};
     defineBaseGetter();
 
     global.using = using;
@@ -164,7 +176,7 @@
 
         scriptsManager.addScript({
             type: SCRIPT_TYPE.COMMON,
-            url: type.toUrl()
+            url: settings.rootPath + type.toUrl()
         });
 	}
 
